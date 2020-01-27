@@ -19,11 +19,10 @@ public class PokemonRemoteRepository {
 
     public Maybe<List<Pokemon>> requestPokemons(int offset, int limit) {
         return service.getPokemons(offset, limit)
-                .map(PokemonResponse::getPokemons)
-                .filter(Objects::nonNull)
+                .doOnSuccess(pokemonResponse -> Log.i(TAG, "Fetching from network succedd"))
                 .doOnError(t -> Log.i(TAG, "Connection error when requesting pokemons: " + t.getMessage()))
-                .doOnComplete(() -> Log.i(TAG, "Pokemon request succedd"))
-                .doOnSuccess(pokemons -> Log.i(TAG, "Fetching from network succedd"));
+                .map(PokemonResponse::getPokemons)
+                .filter(Objects::nonNull);
     }
 
 }

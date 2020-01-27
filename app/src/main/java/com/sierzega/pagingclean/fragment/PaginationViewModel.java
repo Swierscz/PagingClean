@@ -1,118 +1,68 @@
 package com.sierzega.pagingclean.fragment;
 
-import android.util.Log;
-
 import androidx.annotation.NonNull;
 import androidx.lifecycle.LiveData;
 import androidx.lifecycle.MutableLiveData;
 import androidx.lifecycle.ViewModel;
+import androidx.lifecycle.ViewModelProvider;
 import androidx.paging.PagedList;
 
-import com.sierzega.pagingclean.Status;
-import com.sierzega.pagingclean.fragment.repository.PaginationRepository;
 import com.sierzega.pagingclean.model.Pokemon;
-
-import java.util.List;
-
-import io.reactivex.MaybeObserver;
-import io.reactivex.disposables.Disposable;
-import io.reactivex.schedulers.Schedulers;
-
-import static java8.util.stream.StreamSupport.stream;
 
 public class PaginationViewModel extends ViewModel {
     private final static String TAG = PaginationViewModel.class.getSimpleName();
+    private Paginator paginator;
+    private LiveData<PagedList<Pokemon>> pokemons;
+    private MutableLiveData<Boolean> isLoadingLiveData = new MutableLiveData<>(false);
+    private MutableLiveData<Integer> currentPage = new MutableLiveData<>(-1);
 
-    private static final int PAGE_SIZE = 20;
-    private static final int FETCH_SIZE = 50;
-
-    private PaginationRepository paginationRepository;
-    private MutableLiveData<Boolean> isLoading = new MutableLiveData<>(false);
-
-    LiveData<PagedList<Pokemon>> getPokemons() {
-        return paginationRepository.getPokemonLocalRepository().pokemons;
-    }
-
-    LiveData<Boolean> isLoading() {
-        return isLoading;
-    }
-
-    public PaginationViewModel() {
-        PagedList.Config config = new PagedList.Config.Builder()
-                .setPageSize(PAGE_SIZE)
-                .setEnablePlaceholders(false)
-                .build();
-
-        paginationRepository = new PaginationRepository(config);
-
-        paginationRepository.getPokemonLocalRepository().init(new PagedList.BoundaryCallback<Pokemon>() {
+    private PaginationViewModel(int lastSetPage) {
+        paginator = new Paginator(lastSetPage, new Paginator.PaginatorCallback() {
             @Override
-            public void onZeroItemsLoaded() {
-                super.onZeroItemsLoaded();
-                Log.i(TAG, "On zeron items loaded");
-                fetchPokemons();
+            public void isLoading(boolean isLoading) {
+                isLoadingLiveData.postValue(isLoading);
             }
 
             @Override
-            public void onItemAtEndLoaded(@NonNull Pokemon itemAtEnd) {
-                super.onItemAtEndLoaded(itemAtEnd);
-                Log.i(TAG, "On item at end loaded");
-                fetchPokemons();
+            public void lastPageSet(int page) {
+                currentPage.postValue(page);
             }
         });
 
-    }
-
-    public void invalidatePokemonsData() {
-        paginationRepository.getPokemonRemoteRepository().requestPokemons(Status.getInstance().page, FETCH_SIZE)
-                .subscribeOn(Schedulers.io())
-                .doOnSuccess(pokemons -> {
-                    Status.getInstance().page = 0;
-                    paginationRepository.getPokemonLocalRepository().pokemonDao.nukeTable();
-                })
-                .doOnError(t -> Log.i(TAG, "Cannot invalidate pokemons data"))
-                .observeOn(Schedulers.io())
-                .subscribe();
+        this.pokemons = paginator.getPaginationRepository().getPokemonLocalRepository().pokemons;
 
     }
 
+    void invalidatePokemonsData() {
+        paginator.invalidatePokemonsData();
+    }
 
-    private void fetchPokemons() {
-        if (!Status.getInstance().isFetching) {
-            Log.i(TAG, "Fetching pokemons function started");
-            paginationRepository.getPokemonRemoteRepository().requestPokemons(Status.getInstance().page++ * FETCH_SIZE, FETCH_SIZE)
-                    .subscribeOn(Schedulers.io())
-                    .observeOn(Schedulers.io())
-                    .subscribe(new MaybeObserver<List<Pokemon>>() {
-                        @Override
-                        public void onSubscribe(Disposable d) {
-                            Log.i(TAG, "Pokemon fetch subscribed");
-                            isLoading.postValue(true);
-                            Status.getInstance().isFetching = true;
-                        }
+    LiveData<PagedList<Pokemon>> getPokemons() {
+        return pokemons;
+    }
 
-                        @Override
-                        public void onSuccess(List<Pokemon> pokemons) {
-                            Log.i(TAG, "Pokemon fetched");
-                            stream(pokemons)
-                                    .forEach(pokemon -> paginationRepository.getPokemonLocalRepository()
-                                            .pokemonDao.insert(pokemon));
-                            Status.getInstance().isFetching = false;
-                            isLoading.postValue(false);
-                        }
+    LiveData<Boolean> isLoading() {
+        return isLoadingLiveData;
+    }
 
-                        @Override
-                        public void onError(Throwable e) {
-                            Log.i(TAG, "Pokemon list fetch error");
-                            Status.getInstance().isFetching = false;
-                            isLoading.postValue(false);
-                        }
+    LiveData<Integer> getCurrentPage() {
+        return currentPage;
+    }
 
-                        @Override
-                        public void onComplete() {
-                            Log.i(TAG, "Pokemon fetch completed");
-                        }
-                    });
+    public static class Factory extends ViewModelProvider.NewInstanceFactory {
+        private final int lastSetPage;
+
+        public Factory(int lastSetPage) {
+            this.lastSetPage = lastSetPage;
         }
+
+        @SuppressWarnings("unchecked")
+        @NonNull
+        public <T extends ViewModel> T create(@NonNull Class<T> modelClass) {
+            return (T) new PaginationViewModel(lastSetPage);
+        }
+
     }
+
+
 }

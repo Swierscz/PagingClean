@@ -7,6 +7,7 @@ public class PaginationRepository {
     PokemonRemoteRepository pokemonRemoteRepository;
 
     public PaginationRepository(PagedList.Config config) {
+
         pokemonLocalRepository = new PokemonLocalRepository(config);
         pokemonRemoteRepository = new PokemonRemoteRepository();
     }

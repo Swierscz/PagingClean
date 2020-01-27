@@ -8,17 +8,19 @@ import android.view.ViewGroup;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.fragment.app.Fragment;
-import androidx.lifecycle.ViewModelProvider;
+import androidx.lifecycle.ViewModelProviders;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 import androidx.swiperefreshlayout.widget.SwipeRefreshLayout;
 
 import com.github.ybq.android.spinkit.SpinKitView;
 import com.sierzega.pagingclean.R;
+import com.sierzega.pagingclean.SharedPrefUtil;
 import com.sierzega.pagingclean.fragment.ui_components.PokemonAdapter;
 
 import butterknife.BindView;
 import butterknife.ButterKnife;
+import lombok.val;
 
 import static android.view.View.INVISIBLE;
 import static android.view.View.VISIBLE;
@@ -38,14 +40,15 @@ public class PaginationFragment extends Fragment {
                              @Nullable Bundle savedInstanceState) {
         View view = inflater.inflate(R.layout.pagination_fragment, container, false);
         ButterKnife.bind(this, view);
+        int lastPage = SharedPrefUtil.getPage(getContext());
+        val factory = new PaginationViewModel.Factory(lastPage);
+        viewModel = ViewModelProviders.of(getActivity(), factory).get(PaginationViewModel.class);
         return view;
     }
 
     @Override
-    public void onActivityCreated(@Nullable Bundle savedInstanceState) {
-        super.onActivityCreated(savedInstanceState);
-        viewModel = new ViewModelProvider(this).get(PaginationViewModel.class);
-
+    public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
+        super.onViewCreated(view, savedInstanceState);
         swipeRefreshLayout.setOnRefreshListener(() -> {
             swipeRefreshLayout.setRefreshing(true);
             viewModel.invalidatePokemonsData();
@@ -63,7 +66,9 @@ public class PaginationFragment extends Fragment {
         viewModel.isLoading().observe(getViewLifecycleOwner(), isLoading ->
                 spinKitView.setVisibility(isLoading ? VISIBLE : INVISIBLE));
 
-
+        viewModel.getCurrentPage().observe(getViewLifecycleOwner(), currentPage ->
+                SharedPrefUtil.savePage(getContext(), currentPage));
     }
+
 
 }
