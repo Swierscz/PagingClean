@@ -68,7 +68,6 @@ class Paginator {
             Log.i(TAG, "Fetching pokemons function started");
             int page = pageToFetch++;
             paginatorCallback.lastPageSet(page);
-            Log.i(TAG, "PAGEEEE: " + page);
             paginationRepository.getPokemonRemoteRepository().requestPokemons(page * FETCH_SIZE, FETCH_SIZE)
                     .subscribeOn(Schedulers.io())
                     .observeOn(Schedulers.io())
