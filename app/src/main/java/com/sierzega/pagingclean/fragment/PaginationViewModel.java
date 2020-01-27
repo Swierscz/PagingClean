@@ -27,7 +27,6 @@ public class PaginationViewModel extends ViewModel {
     private static final int FETCH_SIZE = 50;
 
     private PaginationRepository paginationRepository;
-    private Paginator paginator;
     private MutableLiveData<Boolean> isLoading = new MutableLiveData<>(false);
 
     LiveData<PagedList<Pokemon>> getPokemons() {
@@ -50,7 +49,7 @@ public class PaginationViewModel extends ViewModel {
             @Override
             public void onZeroItemsLoaded() {
                 super.onZeroItemsLoaded();
-                Log.i(TAG, "On zero items loaded");
+                Log.i(TAG, "On zeron items loaded");
                 fetchPokemons();
             }
 
@@ -63,6 +62,20 @@ public class PaginationViewModel extends ViewModel {
         });
 
     }
+
+    public void invalidatePokemonsData() {
+        paginationRepository.getPokemonRemoteRepository().requestPokemons(Status.getInstance().page, FETCH_SIZE)
+                .subscribeOn(Schedulers.io())
+                .doOnSuccess(pokemons -> {
+                    Status.getInstance().page = 0;
+                    paginationRepository.getPokemonLocalRepository().pokemonDao.nukeTable();
+                })
+                .doOnError(t -> Log.i(TAG, "Cannot invalidate pokemons data"))
+                .observeOn(Schedulers.io())
+                .subscribe();
+
+    }
+
 
     private void fetchPokemons() {
         if (!Status.getInstance().isFetching) {
@@ -98,8 +111,6 @@ public class PaginationViewModel extends ViewModel {
                         @Override
                         public void onComplete() {
                             Log.i(TAG, "Pokemon fetch completed");
-                            Status.getInstance().isFetching = false;
-                            isLoading.postValue(false);
                         }
                     });
         }

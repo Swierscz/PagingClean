@@ -46,7 +46,10 @@ public class PaginationFragment extends Fragment {
         super.onActivityCreated(savedInstanceState);
         viewModel = new ViewModelProvider(this).get(PaginationViewModel.class);
 
-//        swipeRefreshLayout.setOnRefreshListener(() -> swipeRefreshLayout.setRefreshing(true));
+        swipeRefreshLayout.setOnRefreshListener(() -> {
+            swipeRefreshLayout.setRefreshing(true);
+            viewModel.invalidatePokemonsData();
+        });
 
         final PokemonAdapter adapter = new PokemonAdapter();
         recyclerView.setLayoutManager(new LinearLayoutManager(getContext()));

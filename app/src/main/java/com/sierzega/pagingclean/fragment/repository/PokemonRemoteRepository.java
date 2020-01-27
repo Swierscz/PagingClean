@@ -22,7 +22,8 @@ public class PokemonRemoteRepository {
                 .map(PokemonResponse::getPokemons)
                 .filter(Objects::nonNull)
                 .doOnError(t -> Log.i(TAG, "Connection error when requesting pokemons: " + t.getMessage()))
-                .doOnComplete(() -> Log.i(TAG, "Pokemon request succedd"));
+                .doOnComplete(() -> Log.i(TAG, "Pokemon request succedd"))
+                .doOnSuccess(pokemons -> Log.i(TAG, "Fetching from network succedd"));
     }
 
 }
